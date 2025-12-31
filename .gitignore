@@ -1,0 +1,10 @@
+.vs/
+x64/
+Debug/
+Release/
+*.user
+*.filters
+*.sln
+*.vcxproj
+__pycache__/
+*.png
