@@ -1,27 +1,57 @@
 # -*- coding: cp1250 -*-
+## @file benchmark.py
+#  @brief Skrypt automatyzujący testy wydajnościowe programu C++.
+#  @details Skrypt odpowiada za:
+#  - Znalezienie pliku wykonywalnego (.exe).
+#  - Wielokrotne uruchomienie programu z różnymi parametrami (liczba kroków, liczba wątków).
+#  - Parsowanie wyjścia standardowego (stdout) procesu C++.
+#  - Wizualizację wyników na wykresie za pomocą biblioteki matplotlib.
+#  @author Janq12
+#  @date 2025-01-05
+
 import os
 import subprocess
 import matplotlib.pyplot as plt
 
 # --- KONFIGURACJA ŚCIEŻKI ---
-# Sprawdzamy dwie możliwe lokalizacje pliku .exe:
-# 1. Standardowa dla VS: folder solucji (..) -> x64 -> Release
-# 2. Alternatywna: bezpośrednio w folderze x64/Release (jeśli uruchamiasz z innej lokalizacji)
+
+## Lista potencjalnych ścieżek względnych do pliku wykonywalnego.
+#  Skrypt sprawdza folder nadrzędny (strukturę VS) oraz bieżący.
 paths_to_check = [
     os.path.join("..", "x64", "Release", "rownoleglepi.exe"),
     os.path.join("x64", "Release", "rownoleglepi.exe"),
     "rownoleglepi.exe"
 ]
 
+## Zmienna przechowująca znalezioną ścieżkę do pliku EXE.
+#  Wartość None oznacza, że plik nie został odnaleziony.
 EXE_PATH = None
+
+# Logika poszukiwania pliku
 for path in paths_to_check:
     if os.path.exists(path):
         EXE_PATH = path
         break
 
 # --- GŁÓWNA FUNKCJA ---
+
 def run_benchmark():
-    # Jeśli po pętli EXE_PATH nadal jest None, to znaczy, że pliku nie ma nigdzie
+    """!
+    @brief Główna funkcja sterująca procesem benchmarku.
+    
+    @details
+    Funkcja wykonuje następujące kroki:
+    1. Weryfikuje istnienie pliku `rownoleglepi.exe`.
+    2. Definiuje zakresy testów:
+       - Kroki całki: 100 mln, 1 mld, 3 mld.
+       - Wątki: 1 do 50.
+    3. Uruchamia proces potomny (`subprocess`) dla każdej kombinacji parametrów.
+    4. Zbiera czasy wykonania parsując wyjście programu C++.
+    5. Generuje wykres liniowy wydajności i zapisuje go do pliku PNG.
+
+    @note Wymaga biblioteki `matplotlib`.
+    @warning W przypadku braku pliku EXE w trybie Release, funkcja przerywa działanie.
+    """
     if EXE_PATH is None:
         print("BŁĄD KRYTYCZNY: Nie znaleziono pliku 'rownoleglepi.exe'!")
         print(f"Szukałem w następujących miejscach:")
@@ -57,7 +87,6 @@ def run_benchmark():
                     val = float(parts[0])
                     times.append(val)
                     threads_x.append(t)
-                    # Wypisujemy postęp co 5 wątków
                     if t == 1 or t % 5 == 0:
                         print(f"  -> {t} wątków: {val:.4f}s")
             except Exception as e:
