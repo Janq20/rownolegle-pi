@@ -1,47 +1,73 @@
+# -*- coding: cp1250 -*-
 import os
 import subprocess
 import matplotlib.pyplot as plt
 
-EXE_PATH = os.path.join("x64", "Release", "rownoleglepi.exe")
+# --- KONFIGURACJA ŒCIE¯KI ---
+# Sprawdzamy dwie mo¿liwe lokalizacje pliku .exe:
+# 1. Standardowa dla VS: folder solucji (..) -> x64 -> Release
+# 2. Alternatywna: bezpoœrednio w folderze x64/Release (jeœli uruchamiasz z innej lokalizacji)
+paths_to_check = [
+    os.path.join("..", "x64", "Release", "rownoleglepi.exe"),
+    os.path.join("x64", "Release", "rownoleglepi.exe"),
+    "rownoleglepi.exe"
+]
 
+EXE_PATH = None
+for path in paths_to_check:
+    if os.path.exists(path):
+        EXE_PATH = path
+        break
+
+# --- G£ÓWNA FUNKCJA ---
 def run_benchmark():
-    if not os.path.exists(EXE_PATH):
-        print("Brak pliku EXE!")
+    # Jeœli po pêtli EXE_PATH nadal jest None, to znaczy, ¿e pliku nie ma nigdzie
+    if EXE_PATH is None:
+        print("B£¥D KRYTYCZNY: Nie znaleziono pliku 'rownoleglepi.exe'!")
+        print(f"Szuka³em w nastêpuj¹cych miejscach:")
+        for p in paths_to_check:
+            print(f" - {os.path.abspath(p)}")
+        print("\nROZWI¥ZANIE: Upewnij siê, ¿e w Visual Studio zbudowa³eœ projekt w trybie RELEASE.")
         return
 
-    # Konfiguracja
+    print(f"Znaleziono plik EXE: {os.path.abspath(EXE_PATH)}")
+    
+    # Parametry testu
     steps_list = [100_000_000, 1_000_000_000, 3_000_000_000]
     threads_range = range(1, 51)
     
-    # Inicjalizacja wykresu
     plt.figure(figsize=(12, 8))
 
     for steps in steps_list:
-        print(f"Testowanie dla {steps:,} kroków...")
+        print(f"\n--- Testowanie dla {steps:,} kroków ---")
         times = []
-        threads_x = [] # Oœ X 
+        threads_x = []
 
         for t in threads_range:
             try:
+                # Uruchomienie programu
                 res = subprocess.run(
                     [EXE_PATH, str(steps), str(t)],
                     capture_output=True, text=True
                 )
+                
                 parts = res.stdout.strip().split()
                 
                 if len(parts) >= 1:
                     val = float(parts[0])
                     times.append(val)
                     threads_x.append(t)
-                    print(f"  -> {t} w¹tków: {val:.4f}s")
-            except:
-                pass
+                    # Wypisujemy postêp co 5 w¹tków
+                    if t == 1 or t % 5 == 0:
+                        print(f"  -> {t} w¹tków: {val:.4f}s")
+            except Exception as e:
+                print(f"  B³¹d: {e}")
 
-        # Rysowanie linii dla danej serii
+        # Rysowanie wykresu dla danej serii
         plt.plot(threads_x, times, marker='o', markersize=4, label=f'{steps:,} kroków')
 
-    # Stylizacja i zapis
-    plt.title('Wydajnoœæ algorytmu obliczania PI (std::thread)')
+    # Stylizacja
+    plt.title('Wydajnoœæ algorytmu PI (C++ std::thread)')
     plt.xlabel('Liczba w¹tków')
     plt.ylabel('Czas obliczeñ (s)')
     plt.grid(True, linestyle='--', alpha=0.7)
@@ -49,10 +75,11 @@ def run_benchmark():
     
     filename = "wykres_wydajnosci.png"
     plt.savefig(filename)
-    print(f"\nGotowe! Wykres zapisano w pliku: {filename}")
-    
+    print(f"\nSUKCES! Wykres zapisano jako: {filename}")
+    plt.show()
+
 if __name__ == "__main__":
     try:
         run_benchmark()
     except ImportError:
-        print("Brakuje biblioteki matplotlib. Zainstaluj: pip install matplotlib")
+        print("Brakuje biblioteki matplotlib! Zainstaluj: pip install matplotlib")
