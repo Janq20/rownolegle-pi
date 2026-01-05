@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <iomanip> 
 
 using namespace std;
 using namespace std::chrono;
@@ -39,7 +40,6 @@ int main(int argc, char* argv[]) {
         th.join();
     }
 
-    // --- ZMIANA: Agregacja wyników cząstkowych ---
     double total_sum = 0.0;
     for (double p : partial_sums) {
         total_sum += p;
@@ -49,8 +49,9 @@ int main(int argc, char* argv[]) {
     auto end = high_resolution_clock::now();
     duration<double> diff = end - start;
 
-    cout << "Wynik PI: " << pi << endl;
-    cout << "Czas: " << diff.count() << " s" << endl;
+    // --- CZAS WYNIK ---
+    cout << fixed << setprecision(6) << diff.count() << " "
+        << setprecision(15) << pi << endl;
 
     return 0;
 }
