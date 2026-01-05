@@ -1,47 +1,102 @@
+# -*- coding: cp1250 -*-
+## @file benchmark.py
+#  @brief Skrypt automatyzuj¹cy testy wydajnoœciowe programu C++.
+#  @details Skrypt odpowiada za:
+#  - Znalezienie pliku wykonywalnego (.exe).
+#  - Wielokrotne uruchomienie programu z ró¿nymi parametrami (liczba kroków, liczba w¹tków).
+#  - Parsowanie wyjœcia standardowego (stdout) procesu C++.
+#  - Wizualizacjê wyników na wykresie za pomoc¹ biblioteki matplotlib.
+#  @author Janq12
+#  @date 2025-01-05
+
 import os
 import subprocess
 import matplotlib.pyplot as plt
 
-EXE_PATH = os.path.join("x64", "Release", "rownoleglepi.exe")
+# --- KONFIGURACJA ŒCIE¯KI ---
+
+## Lista potencjalnych œcie¿ek wzglêdnych do pliku wykonywalnego.
+#  Skrypt sprawdza folder nadrzêdny (strukturê VS) oraz bie¿¹cy.
+paths_to_check = [
+    os.path.join("..", "x64", "Release", "rownoleglepi.exe"),
+    os.path.join("x64", "Release", "rownoleglepi.exe"),
+    "rownoleglepi.exe"
+]
+
+## Zmienna przechowuj¹ca znalezion¹ œcie¿kê do pliku EXE.
+#  Wartoœæ None oznacza, ¿e plik nie zosta³ odnaleziony.
+EXE_PATH = None
+
+# Logika poszukiwania pliku
+for path in paths_to_check:
+    if os.path.exists(path):
+        EXE_PATH = path
+        break
+
+# --- G£ÓWNA FUNKCJA ---
 
 def run_benchmark():
-    if not os.path.exists(EXE_PATH):
-        print("Brak pliku EXE!")
+    """!
+    @brief G³ówna funkcja steruj¹ca procesem benchmarku.
+    
+    @details
+    Funkcja wykonuje nastêpuj¹ce kroki:
+    1. Weryfikuje istnienie pliku `rownoleglepi.exe`.
+    2. Definiuje zakresy testów:
+       - Kroki ca³ki: 100 mln, 1 mld, 3 mld.
+       - W¹tki: 1 do 50.
+    3. Uruchamia proces potomny (`subprocess`) dla ka¿dej kombinacji parametrów.
+    4. Zbiera czasy wykonania parsuj¹c wyjœcie programu C++.
+    5. Generuje wykres liniowy wydajnoœci i zapisuje go do pliku PNG.
+
+    @note Wymaga biblioteki `matplotlib`.
+    @warning W przypadku braku pliku EXE w trybie Release, funkcja przerywa dzia³anie.
+    """
+    if EXE_PATH is None:
+        print("B£¥D KRYTYCZNY: Nie znaleziono pliku 'rownoleglepi.exe'!")
+        print(f"Szuka³em w nastêpuj¹cych miejscach:")
+        for p in paths_to_check:
+            print(f" - {os.path.abspath(p)}")
+        print("\nROZWI¥ZANIE: Upewnij siê, ¿e w Visual Studio zbudowa³eœ projekt w trybie RELEASE.")
         return
 
-    # Konfiguracja
+    print(f"Znaleziono plik EXE: {os.path.abspath(EXE_PATH)}")
+    
+    # Parametry testu
     steps_list = [100_000_000, 1_000_000_000, 3_000_000_000]
     threads_range = range(1, 51)
     
-    # Inicjalizacja wykresu
     plt.figure(figsize=(12, 8))
 
     for steps in steps_list:
-        print(f"Testowanie dla {steps:,} kroków...")
+        print(f"\n--- Testowanie dla {steps:,} kroków ---")
         times = []
-        threads_x = [] # Oœ X 
+        threads_x = []
 
         for t in threads_range:
             try:
+                # Uruchomienie programu
                 res = subprocess.run(
                     [EXE_PATH, str(steps), str(t)],
                     capture_output=True, text=True
                 )
+                
                 parts = res.stdout.strip().split()
                 
                 if len(parts) >= 1:
                     val = float(parts[0])
                     times.append(val)
                     threads_x.append(t)
-                    print(f"  -> {t} w¹tków: {val:.4f}s")
-            except:
-                pass
+                    if t == 1 or t % 5 == 0:
+                        print(f"  -> {t} w¹tków: {val:.4f}s")
+            except Exception as e:
+                print(f"  B³¹d: {e}")
 
-        # Rysowanie linii dla danej serii
+        # Rysowanie wykresu dla danej serii
         plt.plot(threads_x, times, marker='o', markersize=4, label=f'{steps:,} kroków')
 
-    # Stylizacja i zapis
-    plt.title('Wydajnoœæ algorytmu obliczania PI (std::thread)')
+    # Stylizacja
+    plt.title('Wydajnoœæ algorytmu PI (C++ std::thread)')
     plt.xlabel('Liczba w¹tków')
     plt.ylabel('Czas obliczeñ (s)')
     plt.grid(True, linestyle='--', alpha=0.7)
@@ -49,10 +104,11 @@ def run_benchmark():
     
     filename = "wykres_wydajnosci.png"
     plt.savefig(filename)
-    print(f"\nGotowe! Wykres zapisano w pliku: {filename}")
-    
+    print(f"\nSUKCES! Wykres zapisano jako: {filename}")
+    plt.show()
+
 if __name__ == "__main__":
     try:
         run_benchmark()
     except ImportError:
-        print("Brakuje biblioteki matplotlib. Zainstaluj: pip install matplotlib")
+        print("Brakuje biblioteki matplotlib! Zainstaluj: pip install matplotlib")
