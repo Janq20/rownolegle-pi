@@ -19,7 +19,6 @@ int main(int argc, char* argv[]) {
     vector<double> partial_sums(num_threads, 0.0);
     vector<thread> threads;
     double step = 1.0 / (double)num_steps;
-    double sum = 0.0;
 
     auto start = high_resolution_clock::now();
 
@@ -40,11 +39,18 @@ int main(int argc, char* argv[]) {
         th.join();
     }
 
-    double pi = sum * step;
+    // --- ZMIANA: Agregacja wyników cząstkowych ---
+    double total_sum = 0.0;
+    for (double p : partial_sums) {
+        total_sum += p;
+    }
+    double pi = total_sum * step;
+
+    auto end = high_resolution_clock::now();
+    duration<double> diff = end - start;
 
     cout << "Wynik PI: " << pi << endl;
-
-    cout << "Konfiguracja: " << num_steps << " krokow, " << num_threads << " watkow." << endl;
+    cout << "Czas: " << diff.count() << " s" << endl;
 
     return 0;
 }
